@@ -1,0 +1,339 @@
+// SVM
+
+// Fuse Hessian matrix and kernel computation to avoid excess computation*********
+
+// For array return see - https://www.youtube.com/watch?v=g1Bu4FiJVyQ
+// Read Schaum's Outline of Programming with C/C++
+// or Read programming with C by Bichkar
+/*
+    q = size of train dataset
+    c = column of train dataset
+*/
+/*  https://stackoverflow.com/questions/5201708/how-to-return-a-2d-array-to-a-function-in-c
+    https://stackoverflow.com/questions/4570366/how-to-access-a-local-variable-from-a-different-function-using-pointers
+    https://stackoverflow.com/questions/21391685/returning-a-two-dimensional-array-in-c
+    https://stackoverflow.com/questions/13390541/correct-way-to-return-two-dimensional-array-from-a-function-c
+    
+    https://www.youtube.com/watch?v=E8Yh4dw6Diw&list=PL2_aWCzGMAwLZp6LMUKI3cc7pgGsasm2_&index=14
+*/
+
+#include<stdio.h>
+#include<math.h>
+#include<stdlib.h>
+
+const int q=2;                                              // X.size(0)
+const int c=3;                                              // write code for X.size()
+float X[][3]={{2,3.1,5.2},{20,31,52}};
+float y[]={1,-1};
+
+// Auxiliary Functions
+
+float dot_product(float A[], float B[]);
+float SumDiff(float A[], float B[]);
+float SumSquareDiff(float A[], float B[]);
+
+//              Kernels
+void Linear_kernel(float X[][c], float K[][q]);
+void Polynomial_kernel(float X[][c], float K[][q], int m, int p);
+void Laplacian_kernel(float X[][c], float K[][q], int lambda);
+void Gaussian_kernel(float X[][c], float K[][q], float lambda, float sigma);
+void Sigmoid_kernel(float X[][c], float K[][q], float m, float gamma);
+
+//              SMO
+float* SMO(float X[][c], float C, float tol,int max_pass);
+float f(float A[], float b);
+float Error(int i);
+float max(float a, float b);
+float min(float a, float b);
+
+
+
+//------------------------------------------------------------ Main Function -----------------------------------------------------------------------------
+int main(){
+    //Variables
+    float C;
+    float K[q][q];; //size = q*q 
+    float H[q][q];
+    float lamba, sigma, gamma;
+    float *ALPHA;
+    
+    // Input training dataset
+    /*
+    ... CODE HERE
+    */
+    
+    /*                  Write code for this****
+    if(!is_linearly_seprable(dataset)){
+        //choose kernel i.e call Kernel function simply to update the K matrix
+        // Inilitialize the K-matrix
+        for(int i=0;i<q;i++){
+            for(int j=0;j<q;j++){
+                K[i][j]=0.0;
+            }
+        }
+        //Linear_kernel(X, K);
+        Polynomial_kernel(X, K,1,2);
+        // Laplacian_kernel(X, K,3);
+        // Gaussian_kernel(X, K,1,2);
+        // Sigmoid_kernel(X, K,1,2);
+    }
+    
+    */
+    
+    Linear_kernel(X, K);
+    // Compute Hessian Matrix
+    for(int i=0;i<2;i++){
+            for(int j=0;j<2;j++){
+                H[i][j]=0.0;
+            }
+        }
+    for(int i=0;i<q;i++){
+        for(int j=0;j<=i;j++){
+            H[i][j]=y[i]*y[j]*K[i][j];
+            H[j][i]=H[i][j];
+        }
+    }
+    
+    // Solve Quadratic Problem using SMO
+    // get optimized alpha[q] array
+    ALPHA=SMO(X, 10, .001, 20);
+    // Compute W_hat and w0 or b
+    
+    
+    
+    
+    return 0;
+}
+//---------------------------------------------------------- End of Main Function --------------------------------------------------------------------------------
+//---------------------------------------------------------- Code for Auxiliary Functions -------------------------------------------------------------------------
+
+// Dot Product
+float dot_product(float A[], float B[]){   // passing argument code - dot_product(X[0], X[1])
+    float sum=0;
+    for(int i=0;i<3;i++){
+        sum = sum + A[i]*B[i];
+        //printf("%f\t %f\t%f\n", sum, A[i],B[i]);
+    }
+    return sum;
+}
+
+// SumDiff
+float SumDiff(float A[], float B[]){
+    float sum=0.0;
+    float diff;
+    for(int i=0;i<c;i++){
+        diff = A[i]-B[i];
+        // printf("\n A[%d]: %f\n", i,A[i]);
+        // printf("\n B[%d]: %f\n", i,B[i]);
+        // printf("\n diff: %f\n", diff);
+        sum= sum+diff;
+    }
+    printf("\n sum: %f\n", sum);
+    return sum;
+}
+
+float SumSquareDiff(float A[], float B[]){
+    float sum=0;
+    float diff;
+    for(int i=0;i<c;i++){
+        diff = A[i]-B[i];
+        sum= sum+pow(diff,2);
+    }
+    return sum;
+}
+
+// --------------------------------------------------- KERNEL FUNCTION ---------------------------------------------------------------------------------------------
+
+void Linear_kernel(float X[][c], float K[][q]){
+    for(int i=0;i<q;i++){
+        for(int j=0;j<=i;j++){
+            K[i][j]=dot_product(X[i],X[j]);
+            K[j][i]=K[i][j];
+        }
+    }
+    
+}
+
+void Polynomial_kernel(float X[][c], float K[][q], int m, int p){
+    float dot;
+    float d;
+    for(int i=0;i<q;i++){
+        for(int j=0;j<=i;j++){
+            dot = dot_product(X[i],X[j]);
+            d = dot+m;
+            K[i][j]=pow(d,p);
+            K[j][i]=K[i][j];
+        }
+    }
+}
+
+void Laplacian_kernel(float X[][c], float K[][q], int lambda){   // chekc this -++
+    float sum_diff;
+    for(int i=0;i<q;i++){
+        for(int j=0;j<=i;j++){
+            sum_diff = SumDiff(X[i], X[j]);  // Write code for this function
+            // printf("\n sum_diff: %f", sum_diff);
+            K[i][j]=exp(-lambda*sum_diff);
+            K[j][i]=K[i][j];
+        }
+    }
+}
+
+void Gaussian_kernel(float X[][c], float K[][q], float lambda, float sigma){
+    float sum_sqr_diff;
+    for(int i=0;i<q;i++){
+        for(int j=0;j<=i;j++){
+            sum_sqr_diff = SumSquareDiff(X[i], X[j]);  // Write code for this function
+            K[i][j]=exp(-lambda*sum_sqr_diff/(2*pow(sigma,2)));
+            K[j][i]=K[i][j];
+        }
+    }
+}
+
+void Sigmoid_kernel(float X[][c], float K[][q], float m, float gamma){
+    float dot;
+    for(int i=0;i<q;i++){
+        for(int j=0;j<=i;j++){
+            dot = dot_product(X[i], X[j]);
+            K[i][j]=tanh(gamma*dot+m);  //Write code for tanh function
+            K[j][i]=K[i][j];
+        }
+    }
+}
+
+
+//--------------------------------------------------- END OF KERNEL FUNCTION --------------------------------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//                                                   SMO ALGORITHMS (for optimisation) - http://cs229.stanford.edu/materials/smo.pdf
+
+//https://www.tutorialspoint.com/cprogramming/c_return_arrays_from_function.htm
+
+// Replaced Linear kernel with K simply
+
+float* SMO(float X[][c], float C, float tol,int max_pass){
+    static float alpha[q];
+    float old_alpha[q];
+    float b=0, b1, b2;
+    float E[q];
+    float L, H;
+    float eta;
+    int num_changed_alpha;
+    int passes=0;
+    int j;
+    
+    // Initiliaze alpha;
+    for(int i=0;i<q;i++){
+        alpha[i]=0.0;
+    }
+    
+    // Computing E
+    for(int i=0;i<q;i++){
+        E[i]=Error(i,b);
+    }
+    
+    while(passes<max_pass){
+        num_changed_alpha=0;
+        for(int i=0;i<q;i++){
+            // E[i]=f(X[i],b)-y[i]; // write code for f(X[i][]) function
+            if((y[i]*E[i]<-tol && alpha[i]<C) || (y[i]*E[i]>tol && alpha[i]>0)){
+               j=(rand()%q);
+            //   E[j]=f(X[j],b)-y[j];
+               old_alpha[i]=alpha[i];
+               old_alpha[j]=alpha[j];
+               
+               //Compjute L and H
+               if(y[i]!=y[j]){
+                   L = max(0, alpha[j]-alpha[i]);
+                   H = min(C, C+alpha[j]-alpha[i]);
+               }
+               if(y[i]=y[j]){
+                   L = max(0, alpha[j]+alpha[i]-C);
+                   H = min(C, alpha[j]+alpha[i]);
+               }
+               
+               if(L==H){
+                   continue;
+               }
+              
+              // Compute eta(n)
+              eta=2*K[i][j]-K[i][i]-K[j][j];
+              if(eta>=0){
+                  continue;
+              }
+              
+              // Compute alpha[j]
+              alpha[j] = alpha[j] - (y[j]*(E[i]-E[j]))/eta; // write code for E[i] and replace others E as well
+              if(alpha[j]>H){
+                  alpha[j]=H;
+              }
+              if(alpha[j]<L){
+                  alpha[j]=L;
+              }
+              
+              if(abs(alpha[i]-alpha[j])<10e-5){
+                  continue;
+              }
+              
+              // Determine alpha[i]
+              alpha[i] = alpha[i] + y[i][j]*(old_alpha[j]-alpha[j]);
+              
+              // Compute b1 and b2
+              b1 = b - E[i] - y[i]*(alpha[i]-old_alpha[i])*K[i][i] - y[j]*(alpha[j]-old_alpha[j])*K[i][j];
+              b2 = b - E[j] - y[i]*(alpha[i]-old_alpha[i])*K[i][j] - y[j]*(alpha[j]-old_alpha[j])*K[j][j];
+              
+              
+              // Compute b
+              if(alpha[i]>0 && alpha[i]<C){
+                  b=b1;
+              }
+              
+              else if(alpha[j]>0 && alpha[j]<C){
+                  b=b2;
+              }
+              
+              else{
+                  b=(b1+b2)/2;
+              }
+              
+              num_changed_alpha = num_changed_alpha + 1;
+              
+            }
+        }
+        
+        if(num_changed_alpha==0){
+            passes = passes + 1;
+        }
+        else{
+            passes = 0;
+        }
+    }
+    
+    return alpha;
+}
+
+//------------------------------------------------------ END OF SMO -------------------------------------------------------------------------------------------------------------
+float f(float A[], float b){
+    float sum=0.0;
+    float kernel;
+    float temp;
+    for(int i=0;i<q;i++){
+        kernel = Linear_kernel(X[i], A);
+        temp=alpha[i]*y[i]*kernel;
+        sum=sum+temp;
+    }
+    return sum+b;
+}
+
+float Error(int i, float b){
+    return f(X[i],b)-y[i];
+}
+
+float max(float a, float b){
+    return (a>b)? a: b;
+}
+
+float min(float a, float b){
+    return (a>b)? b: a;
+}
+
